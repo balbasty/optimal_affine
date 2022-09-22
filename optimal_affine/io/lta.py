@@ -96,9 +96,9 @@ class LTAStruct:
     """
 
     type: int = Constants.LINEAR_VOX_TO_VOX     # Affine type
-    nxform: int = 1                             # Number of affines stored
-    mean: tuple = None                          # ?
-    sigma: float = None                         # ?
+    nxforms: int = 1                            # Number of affines stored
+    mean: tuple = (0., 0., 0.)                  # ?
+    sigma: float = 1.                           # ?
     affine: np.ndarray = None                   # Affine(s)
 
     @dataclass
@@ -183,7 +183,7 @@ class LTAStruct:
     def to_lines(self):
         """Iterator over lines"""
         # header
-        attributes = ('type', 'nxform', 'mean', 'sigma')
+        attributes = ('type', 'nxforms', 'mean', 'sigma')
         for attr in attributes:
             val = getattr(self, attr)
             if val is not None:
