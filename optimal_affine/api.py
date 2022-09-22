@@ -60,11 +60,19 @@ references:
 """
 
 
+class AskForHelp(Exception):
+    pass
+
+
+class ParseError(ValueError):
+    pass
+
+
 def parse(args):
 
     args = list(args)
     if not args:
-        raise ValueError('No arguments')
+        raise ParseError('No arguments')
 
     inputs = {}
     output = log = affine = similitude = rigid = None
@@ -75,50 +83,50 @@ def parse(args):
     while args:
         tag = args.pop(0)
         if tag in ('-h', '--help'):
-            raise ValueError
+            raise AskForHelp
         elif tag in ('-i', '--input'):
             fix = args.pop(0)
             if fix in tags:
-                raise ValueError(f'Expected <fix> <mov> <path> after {tag}')
+                raise ParseError(f'Expected <fix> <mov> <path> after {tag}')
             mov = args.pop(0)
             if mov in tags:
-                raise ValueError(f'Expected <fix> <mov> <path> after {tag}')
+                raise ParseError(f'Expected <fix> <mov> <path> after {tag}')
             path = args.pop(0)
             if path in tags:
-                raise ValueError(f'Expected <fix> <mov> <path> after {tag}')
+                raise ParseError(f'Expected <fix> <mov> <path> after {tag}')
             inputs[(fix, mov)] = path
         elif tag in ('-o', '--output'):
             out = args.pop(0)
             if out in tags:
-                raise ValueError(f'Expected <path> after {tag}')
+                raise ParseError(f'Expected <path> after {tag}')
             if output is not None:
-                raise ValueError(f'Max one {tag} accepted')
+                raise ParseError(f'Max one {tag} accepted')
             output = out
         elif tag in ('-l', '--log'):
-            if lie is not None:
-                raise ValueError(f'Max one {tag} accepted')
-            lie = True
+            if log is not None:
+                raise ParseError(f'Max one {tag} accepted')
+            log = True
         elif tag in ('-a', '--affine'):
             if affine is not None:
-                raise ValueError(f'Max one {tag} accepted')
+                raise ParseError(f'Max one {tag} accepted')
             affine = True
         elif tag in ('-s', '--similitude'):
             if similitude is not None:
-                raise ValueError(f'Max one {tag} accepted')
+                raise ParseError(f'Max one {tag} accepted')
             similitude = True
         elif tag in ('-r', '--rigid'):
             if rigid is not None:
-                raise ValueError(f'Max one {tag} accepted')
+                raise ParseError(f'Max one {tag} accepted')
             rigid = True
         else:
-            raise ValueError(f'Unknown tag {tag}')
+            raise ParseError(f'Unknown tag {tag}')
 
     output = output or '{label}_optimal.lta'
     affine = affine or False
     similitude = similitude or False
     rigid = rigid or False
     if int(rigid) + int(similitude) + int(affine) > 1:
-        raise ValueError('Max one of --rigid, --similitude, --affine accepeted')
+        raise ParseError('Max one of --rigid, --similitude, --affine accepeted')
     if int(rigid) + int(similitude) + int(affine) == 0:
         affine = True
     if affine:
@@ -138,7 +146,10 @@ def cli(args=None):
 
     try:
         inputs, output, log, basis = parse(args)
-    except ValueError as e:
+    except AskForHelp:
+        print(help)
+        return
+    except ParseError as e:
         print(help)
         print('[ERROR]', e)
         return
