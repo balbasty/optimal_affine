@@ -15,7 +15,7 @@ notes:
       introducing bias in the mean space estimation. This bias can be 
       overcome in the statistical sense if the number of subjects is large  
       and evaluated pairs are randomly sampled.
-    - Instead of symmetrizing pairwise transforms first, we fit the mean 
+    - Instead of first symmetrizing pairwise transforms, we fit the mean 
       space form all possible forward and backward transformations.
     - Instead of minimizing the L2 norm in the matrix Lie algebra 
       (which is done implicitly by Leung et al's method), we add 
@@ -33,10 +33,20 @@ arguments:
                           <mov>   Index (or label) of moving image
                           <path>  Path to an LTA file that warps <mov> to <fix>
     -o, --output        Path to output transforms (default: {label}_optimal.lta)
-    -l, --lie           Minimize L2 in Lie algebra (default: Frobenius)
+    -l, --log           Minimize L2 in Lie algebra (default: L2 in matrix space)
     -a, --affine        Assume transforms are all affine (default)
     -s, --similitude    Assume transforms are all similitude
     -r, --rigid         Assume transforms are all rigid
+
+example:
+    optimal_affine \
+      -i mtw pdw mtw_to_pdw.lta \
+      -i mtw t1w mtw_to_t1w.lta \
+      -i pdw mtw pdw_to_mtw.lta \
+      -i pdw t1w pdw_to_t1w.lta \
+      -i t1w mtw t1w_to_mtw.lta \
+      -i t1w pdw t1w_to_pdw.lta \
+      -o out/{label}_to_mean.lta
 
 references:
     "Consistent multi-time-point brain atrophy estimation from the 
@@ -57,7 +67,7 @@ def parse(args):
         raise ValueError('No arguments')
 
     inputs = {}
-    output = lie = affine = similitude = rigid = None
+    output = log = affine = similitude = rigid = None
 
     tags = ('-i', '--input', '-o', '--output', '-l', '--lie',
             '-a', '--affine', '-s', '--similitude', '-r' , '--rigid')
@@ -84,7 +94,7 @@ def parse(args):
             if output is not None:
                 raise ValueError(f'Max one {tag} accepted')
             output = out
-        elif tag in ('-l', '--lie'):
+        elif tag in ('-l', '--log'):
             if lie is not None:
                 raise ValueError(f'Max one {tag} accepted')
             lie = True
@@ -118,7 +128,7 @@ def parse(args):
     else:
         basis = 'SE'
 
-    return inputs, output, lie, basis
+    return inputs, output, log, basis
 
 
 def cli(args=None):
@@ -127,7 +137,7 @@ def cli(args=None):
         args = sys.argv[1:]
 
     try:
-        inputs, output, lie, basis = parse(args)
+        inputs, output, log, basis = parse(args)
     except ValueError as e:
         print(help)
         print('[ERROR]', e)
@@ -138,7 +148,7 @@ def cli(args=None):
     inputs = {k: LinearTransformArray(v).matrix()[0]
               for k, v in inputs.items()}
     optimal = optimal_affine(inputs, basis=basis,
-                             loss='lie' if lie else 'matrix')
+                             loss='log' if log else 'exp')
 
     labels = list(set([label for pair in inputs for label in pair]))
     for i, label in enumerate(labels):
